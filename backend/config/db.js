@@ -1,16 +1,14 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.DB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    console.log('MongoDB connected');
-  } catch (error) {
-    console.error('Database connection error:', error);
-    process.exit(1);
-  }
-};
+// Create a Sequelize instance
+const sequelize = new Sequelize('pharmacy_db', 'root', 'Ravi@123', {
+  host: 'localhost',
+  dialect: 'mysql',
+  port: 3306,
+});
 
-module.exports = connectDB;
+sequelize.sync({ alter: true })
+  .then(() => console.log('Database synced!'))
+  .catch((err) => console.error('Error syncing database:', err));
+
+module.exports = { sequelize };
