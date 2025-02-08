@@ -1,0 +1,21 @@
+.profile-container {
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .profile-details {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+  }
+  
+  h2 {
+    text-align: center;
+  }
+  
+  .error-message {
+    color: red;
+    text-align: center;
+  }
+  

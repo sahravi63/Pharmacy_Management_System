@@ -1,0 +1,78 @@
+.orders-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .order-form {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .order-form label {
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  .order-form input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .add-order-btn {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .add-order-btn:hover {
+    background-color: #45a049;
+  }
+  
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .orders-table th, .orders-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .orders-table th {
+    background-color: #f4f4f4;
+  }
+  
+  .complete-btn, .cancel-btn {
+    padding: 5px 10px;
+    margin-right: 5px;
+    cursor: pointer;
+  }
+  
+  .complete-btn {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .complete-btn:hover {
+    background-color: #45a049;
+  }
+  
+  .cancel-btn {
+    background-color: #f44336;
+    color: white;
+  }
+  
+  .cancel-btn:hover {
+    background-color: #e53935;
+  }
+  
