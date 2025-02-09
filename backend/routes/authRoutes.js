@@ -76,6 +76,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
 // Middleware to protect routes (only logged-in users can access)
 const protect = (req, res, next) => {
   let token;

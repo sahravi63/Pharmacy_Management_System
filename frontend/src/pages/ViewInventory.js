@@ -1,64 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './viewInventory.css'; // Make sure the correct path is used
 
 const ViewInventory = () => {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const response = await axios.get('/api/medicines');
-        setMedicines(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
-      }
-    };
+  // Fetch medicines function defined outside useEffect
+  const fetchMedicines = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/medicines'); // Ensure your backend is running at this port
+      setMedicines(response.data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message || 'Error fetching inventory');
+      setLoading(false);
+    }
+  };
 
+  // useEffect to fetch medicines on component mount
+  useEffect(() => {
     fetchMedicines();
   }, []);
 
+  const retryFetch = () => {
+    setLoading(true);
+    setError(null);
+    fetchMedicines(); // Retry fetching on error
+  };
+
   if (loading) {
-    return <div>Loading inventory...</div>;
+    return <div className="text-center mt-4">Loading inventory...</div>;
   }
 
   if (error) {
-    return <div>Error fetching inventory: Backend not connected yet {error}</div>;
+    return (
+      <div className="text-center mt-4 text-red-600">
+        <p>{error}</p>
+        <button onClick={retryFetch} className="mt-2 text-blue-500 underline">Retry</button>
+      </div>
+    );
   }
 
   return (
-    <div className="container">
-      <h2 className="text-2xl font-bold mb-4">Inventory</h2>
+    <div className="inventory-container">
+      <h2 className="inventory-heading">Medicine Inventory</h2>
       {medicines.length === 0 ? (
-        <p>No medicines available in inventory.</p>
+        <p className="text-center">No medicines available in the inventory.</p>
       ) : (
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b">Name</th>
-              <th className="py-2 px-4 border-b">Description</th>
-              <th className="py-2 px-4 border-b">Price</th>
-              <th className="py-2 px-4 border-b">Stock</th>
-              <th className="py-2 px-4 border-b">Expiry Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {medicines.map((medicine) => (
-              <tr key={medicine._id}>
-                <td className="py-2 px-4 border-b">{medicine.name}</td>
-                <td className="py-2 px-4 border-b">{medicine.description}</td>
-                <td className="py-2 px-4 border-b">${medicine.price.toFixed(2)}</td>
-                <td className="py-2 px-4 border-b">{medicine.stock}</td>
-                <td className="py-2 px-4 border-b">
-                  {new Date(medicine.expiryDate).toLocaleDateString()}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="inventory-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price ($)</th>
+                <th>Stock</th>
+                <th>Expiry Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {medicines.map((medicine) => (
+                <tr key={medicine._id}>
+                  <td>{medicine.name}</td>
+                  <td>{medicine.description || 'N/A'}</td>
+                  <td>{medicine.price ? `$${medicine.price.toFixed(2)}` : 'N/A'}</td>
+                  <td>{medicine.stock || 'Out of Stock'}</td>
+                  <td>{medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
