@@ -10,7 +10,7 @@ function Header({ isAuthenticated }) {
         <ul className="nav-list">
           {isAuthenticated ? (
             <>
-              <li><a href="/CustomerProfile" className="nav-item">Profile</a></li>
+              <li><a href="/Customer-profile" className="nav-item">Profile</a></li>
               <li><a href="/search" className="nav-item">Search</a></li>
               <li><a href="/" className="nav-item">Log out</a></li>
             </>

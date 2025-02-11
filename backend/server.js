@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const medicineRoutes = require('./routes/medicineRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const customer_ProfileRoutes= require('./routes/customer_profileRoutes');
 const { connectDB, sequelize } = require('./config/db');
 require('dotenv').config();
 
@@ -20,6 +22,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 
 app.use('/api/medicines', medicineRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/customer', customer_ProfileRoutes);
 
 // Sync Sequelize models with the database
 sequelize.sync({ alter: true })  // alter: true ensures the tables are updated without dropping

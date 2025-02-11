@@ -1,26 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Order.css'; // Add this file for styling
+import axios from 'axios'; // Install axios for HTTP requests
 
 function Orders() {
-  // State for existing orders (to be fetched from the backend in a real-world scenario)
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      customerName: 'John Doe',
-      medicine: 'Paracetamol',
-      quantity: 3,
-      totalPrice: 15.0,
-      status: 'Pending',
-    },
-    {
-      id: 2,
-      customerName: 'Jane Smith',
-      medicine: 'Amoxicillin',
-      quantity: 2,
-      totalPrice: 20.0,
-      status: 'Completed',
-    },
-  ]);
+  // State for existing orders fetched from the backend
+  const [orders, setOrders] = useState([]);
 
   // State for new order form
   const [newOrder, setNewOrder] = useState({
@@ -28,6 +12,20 @@ function Orders() {
     medicine: '',
     quantity: 1,
   });
+
+  // Fetch orders from the backend on component mount
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/orders'); // Adjust your API route if needed
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
 
   // Handle input changes for the new order
   const handleChange = (e) => {
@@ -39,31 +37,40 @@ function Orders() {
   };
 
   // Handle adding a new order
-  const handleAddOrder = () => {
-    const newOrderId = orders.length + 1;
-    const newTotalPrice = newOrder.quantity * 5; // Assume $5 per unit for simplicity
-    const order = {
-      ...newOrder,
-      id: newOrderId,
-      totalPrice: newTotalPrice,
-      status: 'Pending',
-    };
+  const handleAddOrder = async () => {
+    try {
+      const newTotalPrice = newOrder.quantity * 5; // Assume $5 per unit for simplicity
+      const order = {
+        ...newOrder,
+        totalPrice: newTotalPrice,
+        status: 'Pending',
+      };
 
-    setOrders([...orders, order]);
-    setNewOrder({
-      customerName: '',
-      medicine: '',
-      quantity: 1,
-    });
+      // Send a POST request to the backend to save the new order
+      const response = await axios.post('http://localhost:5000/api/orders', order); // Adjust your API route
+      setOrders([...orders, response.data]); // Add the new order to the state
+      setNewOrder({
+        customerName: '',
+        medicine: '',
+        quantity: 1,
+      });
+    } catch (error) {
+      console.error('Error adding order:', error);
+    }
   };
 
   // Example of status management (Pending, Completed, Canceled)
-  const updateOrderStatus = (id, newStatus) => {
-    setOrders(
-      orders.map((order) =>
-        order.id === id ? { ...order, status: newStatus } : order
-      )
-    );
+  const updateOrderStatus = async (id, newStatus) => {
+    try {
+      await axios.patch(`http://localhost:5000/api/orders/${id}`, { status: newStatus }); // Send status update to the backend
+      setOrders(
+        orders.map((order) =>
+          order.id === id ? { ...order, status: newStatus } : order
+        )
+      );
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
   };
 
   return (

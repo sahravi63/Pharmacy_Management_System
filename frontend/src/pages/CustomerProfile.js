@@ -7,12 +7,12 @@ function CustomerProfile() {
 
   useEffect(() => {
     // Fetch customer details (This would be fetched from backend API)
-    fetch('/api/customer/profile')
+    fetch('http://localhost:5000/api/customer/profile')
       .then((response) => response.json())
       .then((data) => setCustomer(data));
 
     // Fetch customer's order history
-    fetch('/api/customer/orders')
+    fetch('http://localhost:5000/api/customer/orders')
       .then((response) => response.json())
       .then((data) => setOrderHistory(data));
   }, []);
