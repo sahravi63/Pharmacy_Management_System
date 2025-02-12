@@ -59,15 +59,15 @@ function Orders() {
     }
   };
 
-  // Example of status management (Pending, Completed, Canceled)
+  // Function to update the status of an order
   const updateOrderStatus = async (id, newStatus) => {
+    console.log(`Updating order with ID: ${id} to status: ${newStatus}`); // Debugging log
+
     try {
       await axios.patch(`http://localhost:5000/api/orders/${id}`, { status: newStatus }); // Send status update to the backend
-      setOrders(
-        orders.map((order) =>
-          order.id === id ? { ...order, status: newStatus } : order
-        )
-      );
+
+      // After updating the status, fetch the updated orders from the backend
+      fetchOrders();
     } catch (error) {
       console.error('Error updating order status:', error);
     }

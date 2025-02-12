@@ -1,91 +1,118 @@
-import React, { useState } from 'react';
-import './SalesReport.css'; // Add this file for styling
+import React, { useState, useEffect } from 'react';
+import './SalesReport.css';
 
 function SalesReport() {
-  const [salesData, setSalesData] = useState([
-    {
-      id: 1,
-      date: '2025-01-15',
-      customerName: 'John Doe',
-      totalAmount: 150,
-      itemsSold: [
-        { name: 'Paracetamol', quantity: 3, price: 50 },
-      ],
-    },
-    {
-      id: 2,
-      date: '2025-01-16',
-      customerName: 'Jane Smith',
-      totalAmount: 200,
-      itemsSold: [
-        { name: 'Amoxicillin', quantity: 2, price: 100 },
-      ],
-    },
-  ]);
+  const [salesData, setSalesData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Example of total revenue calculation
+  useEffect(() => {
+    fetchSalesData();
+  }, []);
+
+  const fetchSalesData = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/sales/$(id)');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales data');
+      }
+      const data = await response.json();
+      setSalesData(data);
+      setFilteredData(data);
+      setLoading(false);
+    } catch (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+  };
+
   const calculateTotalRevenue = () => {
-    return salesData.reduce((total, sale) => total + sale.totalAmount, 0);
+    return filteredData.reduce((total, sale) => total + sale.totalAmount, 0);
   };
 
-  // Placeholder for date range filter (not functional in this example)
-  const filterByDate = (startDate, endDate) => {
-    // You would implement date filtering logic here
-    console.log(`Filtering sales from ${startDate} to ${endDate}`);
+  const filterByDate = () => {
+    if (!startDate || !endDate) {
+      alert('Please select both start and end dates.');
+      return;
+    }
+
+    const filtered = salesData.filter((sale) => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= new Date(startDate) && saleDate <= new Date(endDate);
+    });
+
+    setFilteredData(filtered);
   };
+
+  const clearFilter = () => {
+    setFilteredData(salesData);
+    setStartDate('');
+    setEndDate('');
+  };
+
+  if (loading) {
+    return <p>Loading sales data...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error}</p>;
+  }
 
   return (
     <div className="sales-report-container">
       <h2>Sales Report</h2>
 
-      {/* Date Range Filter - This can be used to filter sales */}
-      <div className="filter-container">
+      {/* Date Range Filter */}
+      <div className="date-filter">
         <label>
           Start Date:
-          <input type="date" name="startDate" />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
         </label>
         <label>
           End Date:
-          <input type="date" name="endDate" />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
         </label>
-        <button onClick={() => filterByDate()}>Filter</button>
+        <button onClick={filterByDate}>Filter</button>
+        <button onClick={clearFilter}>Clear</button>
       </div>
 
       {/* Sales Table */}
-      <table className="sales-report-table">
+      <table className="sales-table">
         <thead>
           <tr>
             <th>Sale ID</th>
+            <th>Order ID</th>
             <th>Date</th>
-            <th>Customer</th>
-            <th>Items Sold</th>
             <th>Total Amount</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
-          {salesData.map((sale) => (
+          {filteredData.map((sale) => (
             <tr key={sale.id}>
               <td>{sale.id}</td>
-              <td>{sale.date}</td>
-              <td>{sale.customerName}</td>
-              <td>
-                <ul>
-                  {sale.itemsSold.map((item, index) => (
-                    <li key={index}>
-                      {item.name} (Qty: {item.quantity}, Price: ${item.price})
-                    </li>
-                  ))}
-                </ul>
-              </td>
-              <td>${sale.totalAmount}</td>
+              <td>{sale.orderId}</td> {/* Display order ID */}
+              <td>{new Date(sale.date).toLocaleDateString()}</td>
+              <td>${sale.totalAmount.toFixed(2)}</td>
+              <td>{sale.status}</td> {/* Display status */}
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Total Revenue */}
       <div className="total-revenue">
-        <h3>Total Revenue: ${calculateTotalRevenue()}</h3>
+        <h3>Total Revenue: ${calculateTotalRevenue().toFixed(2)}</h3>
       </div>
     </div>
   );
