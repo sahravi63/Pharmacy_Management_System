@@ -1,3 +1,4 @@
+// routes/sales.js
 const express = require('express');
 const { Sales, SalesItems } = require('../models/sales');
 const router = express.Router();
@@ -19,7 +20,7 @@ router.post('/', async (req, res) => {
       name: item.name,
       quantity: item.quantity,
       price: item.price,
-      saleId: newSale.id, // Foreign key for association
+      saleId: newSale.id,
     }));
 
     await Promise.all(itemsPromises);

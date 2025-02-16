@@ -1,5 +1,6 @@
+// models/Sales.js
 const { DataTypes } = require('sequelize');
-const {sequelize }= require('../config/db'); // Ensure this path points to your database config
+const { sequelize } = require('../config/db');
 
 const Sales = sequelize.define('Sales', {
   date: {
@@ -14,11 +15,26 @@ const Sales = sequelize.define('Sales', {
   totalAmount: {
     type: DataTypes.FLOAT,
     allowNull: false,
-  },
-  itemsSold: {
-    type: DataTypes.JSON, // Store an array of items in JSON format
-    allowNull: false,
-  },
+  }
 });
 
-module.exports = Sales;
+const SalesItems = sequelize.define('SalesItems', {
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  quantity: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  price: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+  }
+});
+
+// Associate SalesItems with Sales (One-to-Many relationship)
+Sales.hasMany(SalesItems, { as: 'itemsSold', foreignKey: 'saleId' });
+SalesItems.belongsTo(Sales, { foreignKey: 'saleId' });
+
+module.exports = { Sales, SalesItems };

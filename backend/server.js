@@ -27,10 +27,15 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/customer', customer_ProfileRoutes);
 app.use('/api/sales', sales_routes);
 
-// Sync Sequelize models with the database
-sequelize.sync({ alter: true })  // alter: true ensures the tables are updated without dropping
-  .then(() => console.log('Database synced!'))
-  .catch((err) => console.error('Error syncing database:', err));
+// Prevent Sequelize from attempting to drop columns that don't exist
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('Database synced successfully!');
+  })
+  .catch((error) => {
+    console.error('Error syncing database:', error);
+  });
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;

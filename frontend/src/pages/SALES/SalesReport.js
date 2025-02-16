@@ -15,7 +15,8 @@ function SalesReport() {
 
   const fetchSalesData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/sales/$(id)');
+      const response = await fetch(`http://localhost:5000/api/sales`);
+
       if (!response.ok) {
         throw new Error('Failed to fetch sales data');
       }
@@ -92,20 +93,26 @@ function SalesReport() {
         <thead>
           <tr>
             <th>Sale ID</th>
-            <th>Order ID</th>
             <th>Date</th>
             <th>Total Amount</th>
-            <th>Status</th>
+            <th>Items Sold</th>
           </tr>
         </thead>
         <tbody>
           {filteredData.map((sale) => (
             <tr key={sale.id}>
               <td>{sale.id}</td>
-              <td>{sale.orderId}</td> {/* Display order ID */}
               <td>{new Date(sale.date).toLocaleDateString()}</td>
               <td>${sale.totalAmount.toFixed(2)}</td>
-              <td>{sale.status}</td> {/* Display status */}
+              <td>
+                <ul>
+                  {sale.itemsSold.map(item => (
+                    <li key={item.id}>
+                      {item.name} (x{item.quantity}) - ${item.price.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              </td>
             </tr>
           ))}
         </tbody>

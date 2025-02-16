@@ -7,11 +7,11 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
-import AddMedicine from './pages/AddMedicine';
-import ViewInventory from './pages/ViewInventory';
-import Orders from './pages/Order';
-import SalesReport from './pages/SalesReport';
-import CustomerProfile from './pages/CustomerProfile';
+import AddMedicine from './pages/ADDMEDICINE/AddMedicine';
+import ViewInventory from './pages/INVENTORY/ViewInventory';
+import Orders from './pages/ORDERS/Order';
+import SalesReport from './pages/SALES/SalesReport';
+import CustomerProfile from './pages/CUSTOMERPROFILE/CustomerProfile';
 import './App.css';
 
 function App() {
