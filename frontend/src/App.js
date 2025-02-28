@@ -31,7 +31,7 @@ function App() {
               <Route path="/add-medicine" element={isAuthenticated ? <AddMedicine /> : <Navigate to="/" />} />
               <Route path="/inventory" element={isAuthenticated ? <ViewInventory /> : <Navigate to="/" />} />
               <Route path="/Orders" element={isAuthenticated ? <Orders /> : <Navigate to="/" />} />
-              <Route path="/sales-report" element={isAuthenticated ? <SalesReport /> : <Navigate to="/" />} />
+              <Route path="/sales-report" element={isAuthenticated ? <SalesReport /> : <Navigate to="/customer-profile" />} />
               <Route path="/customer-profile" element={isAuthenticated ? <CustomerProfile /> : <Navigate to="/" />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />

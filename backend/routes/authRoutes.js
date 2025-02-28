@@ -51,13 +51,18 @@ router.post('/signup', async (req, res) => {
 
 // Login Route
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role, pharmacistID } = req.body;
 
   try {
     // Check if the user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email, role } });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Pharmacist role check
+    if (role === 'pharmacist' && user.pharmacistID !== pharmacistID) {
+      return res.status(400).json({ message: 'Invalid Pharmacist ID' });
     }
 
     // Compare the provided password with the hashed password in the database
@@ -67,11 +72,14 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate a JWT token
-    const token = generateToken(user.id);
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
 
     // Respond with the token
     res.json({ token });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

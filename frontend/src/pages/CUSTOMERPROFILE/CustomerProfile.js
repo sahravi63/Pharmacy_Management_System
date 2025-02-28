@@ -1,24 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import './CustomerProfile.css';  // Assuming custom CSS styles
+import './CustomerProfile.css'; // Assuming custom CSS styles
 
 function CustomerProfile() {
   const [customer, setCustomer] = useState(null);
   const [orderHistory, setOrderHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch customer details (This would be fetched from backend API)
-    fetch('http://localhost:5000/api/customer/profile')
-      .then((response) => response.json())
-      .then((data) => setCustomer(data));
+    // Fetch customer details
+    const fetchCustomerDetails = async () => {
+      try {
+        const profileResponse = await fetch('http://localhost:5000/api/customer/profile');
+        const profileData = await profileResponse.json();
+        setCustomer(profileData);
 
-    // Fetch customer's order history
-    fetch('http://localhost:5000/api/customer/orders')
-      .then((response) => response.json())
-      .then((data) => setOrderHistory(data));
+        const ordersResponse = await fetch('http://localhost:5000/api/customer/orders');
+        const ordersData = await ordersResponse.json();
+        setOrderHistory(ordersData);
+      } catch (err) {
+        setError('Failed to fetch customer data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomerDetails();
   }, []);
 
+  if (loading) {
+    return <div className="loading">Loading customer data...</div>;
+  }
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
+
   if (!customer) {
-    return <div>Loading...</div>; // Show loading while fetching customer data
+    return <div>No customer data available.</div>;
   }
 
   return (
@@ -63,8 +82,12 @@ function CustomerProfile() {
 
       <div className="account-settings">
         <h3>Account Settings</h3>
-        <button className="edit-profile-btn">Edit Profile</button>
-        <button className="change-password-btn">Change Password</button>
+        <button className="edit-profile-btn" onClick={() => alert('Edit Profile feature coming soon!')}>
+          Edit Profile
+        </button>
+        <button className="change-password-btn" onClick={() => alert('Change Password feature coming soon!')}>
+          Change Password
+        </button>
       </div>
     </div>
   );
