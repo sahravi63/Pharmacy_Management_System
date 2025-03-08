@@ -11,8 +11,9 @@ function SignUp() {
   });
 
   const [pharmacistID, setPharmacistID] = useState(null); // For Pharmacist ID
-  const [showPharmacistID, setShowPharmacistID] = useState(false); // To toggle ID visibility
+  const [customerID, setCustomerID] = useState(null); // For Customer ID
   const [message, setMessage] = useState(''); // Message display
+  const [error, setError] = useState(''); // Error display
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -23,23 +24,24 @@ function SignUp() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    setMessage(''); // Reset message
+    setError(''); // Reset error
+
     try {
       const response = await axios.post('http://localhost:5000/api/auth/signup', user);
-
-      // Log the response for debugging
-      console.log('Signup Response:', response.data);
 
       // Check if pharmacistID exists in the response (pharmacist registration)
       if (response.data.pharmacistID) {
         setPharmacistID(response.data.pharmacistID); // Set Pharmacist ID
-        setShowPharmacistID(true); // Show Pharmacist ID section
         setMessage('Pharmacist registered successfully! Here is your Pharmacist ID.');
-      } else {
-        // Customer registration
-        setMessage('Customer registered successfully!');
+      } 
+      
+      // Check if customerID exists in the response (customer registration)
+      else if (response.data.customerID) {
+        setCustomerID(response.data.customerID); // Set Customer ID
+        setMessage('Customer registered successfully! Here is your Customer ID.');
       }
-  
+
       // Reset form after successful registration
       setUser({
         name: '',
@@ -48,8 +50,8 @@ function SignUp() {
         role: 'customer', // Reset back to customer
       });
     } catch (error) {
-      console.error('Registration error:', error);
-      setMessage('Error registering user. Please try again.');
+      console.error('Registration error:', error.response?.data?.message || error.message);
+      setError('Error registering user. Please try again.');
     }
   };
 
@@ -115,13 +117,22 @@ function SignUp() {
       </form>
 
       {/* Display message */}
-      {message && <p className="message">{message}</p>}
+      {message && <p className="message success">{message}</p>}
+      {error && <p className="message error">{error}</p>}
 
       {/* Pharmacist ID Display */}
-      {showPharmacistID && (
+      {pharmacistID && (
         <div className="pharmacist-id-container">
           <p>Your Pharmacist ID for login access:</p>
           <strong>{pharmacistID}</strong>
+        </div>
+      )}
+
+      {/* Customer ID Display */}
+      {customerID && (
+        <div className="customer-id-container">
+          <p>Your Customer ID for login access:</p>
+          <strong>{customerID}</strong>
         </div>
       )}
     </div>

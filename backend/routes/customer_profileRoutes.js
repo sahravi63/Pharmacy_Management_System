@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 // Import your customer model
-const Customer = require('../models/Customer');
+const Customer = require('../models/customer');
 
-// GET customer profile (Assuming customer is authenticated)
+
 router.get('/profile', async (req, res) => {
   try {
-    // Assuming req.user holds the authenticated user's info (use JWT or sessions for auth)
+   
     const customerId = req.user._id;
 
     const customer = await Customer.findById(customerId);
@@ -21,19 +21,19 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-// PUT: Update customer profile
+
 router.put('/profile', async (req, res) => {
   const { name, email, phone, address } = req.body;
 
   try {
-    const customerId = req.user._id; // Assuming req.user holds the authenticated user's info
+    const customerId = req.user._id; 
     const customer = await Customer.findById(customerId);
 
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // Update customer profile fields
+    
     customer.name = name || customer.name;
     customer.email = email || customer.email;
     customer.phone = phone || customer.phone;
@@ -46,11 +46,11 @@ router.put('/profile', async (req, res) => {
   }
 });
 
-// GET customer order history
+
 router.get('/orders', async (req, res) => {
   try {
-    const customerId = req.user._id; // Assuming req.user holds the authenticated user's info
-    const orders = await Order.find({ customerId }); // Adjust based on your data model
+    const customerId = req.user._id; 
+    const orders = await Order.find({ customerId }); 
 
     if (!orders) {
       return res.status(404).json({ message: 'No orders found' });

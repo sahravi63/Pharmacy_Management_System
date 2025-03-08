@@ -25,6 +25,15 @@ function Home() {
             <p>Role-based access for pharmacists and customers to manage tasks efficiently.</p>
           </div>
         </div>
+
+        {/* <div className="feature-item">
+            <h3>Order Management</h3>
+            <p>Track customer orders, update status, and ensure timely deliveries.</p>
+          </div>
+          <div className="feature-item">
+            <h3>Pharmacist & Customer Access</h3>
+            <p>Role-based access for pharmacists and customers to manage tasks efficiently.</p>
+          </div> */}
       </section>
 
 

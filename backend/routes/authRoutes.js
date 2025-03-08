@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/User'); // Sequelize MySQL User model
 const router = express.Router();
 
 // Helper function to generate a JWT token
@@ -12,6 +12,11 @@ const generateToken = (id) => {
 // Helper function to generate a Pharmacist ID
 const generatePharmacistID = () => {
   return 'PHARM-' + Math.floor(1000 + Math.random() * 9000); // Example pharmacist ID format
+};
+
+// Helper function to generate a Customer ID
+const generateCustomerID = () => {
+  return 'CUST-' + Math.floor(1000 + Math.random() * 9000); // Example customer ID format
 };
 
 // Sign Up Route
@@ -34,17 +39,19 @@ router.post('/signup', async (req, res) => {
       email,
       password: hashedPassword,
       role,
-      pharmacistID: role === 'pharmacist' ? generatePharmacistID() : null, // Create PharmacistID for role 'pharmacist'
+      pharmacistID: role === 'pharmacist' ? generatePharmacistID() : null,
+      customerID: role === 'customer' ? generateCustomerID() : null,
     });
 
-    // Respond with success, token, and pharmacistID if applicable
+    // Respond with success, token, and pharmacistID/customerID if applicable
     res.status(201).json({
       message: 'User registered successfully',
       token: generateToken(user.id),
       pharmacistID: user.pharmacistID,
+      customerID: user.customerID,
     });
   } catch (error) {
-    console.error('Error registering user:', error);  // Log the error for debugging
+    console.error('Error registering user:', error); // Log the error for debugging
     res.status(500).json({ message: 'Error registering user', error: error.message });
   }
 });
@@ -72,9 +79,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate a JWT token
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const token = generateToken(user.id);
 
     // Respond with the token
     res.json({ token });
@@ -84,15 +89,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-
 // Middleware to protect routes (only logged-in users can access)
 const protect = (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       // Get token from the header
       token = req.headers.authorization.split(' ')[1];
@@ -115,8 +116,18 @@ const protect = (req, res, next) => {
 };
 
 // Protected route to get the user profile
-router.get('/profile', protect, (req, res) => {
-  res.json({ message: 'Profile information', userId: req.user });
+router.get('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user, { attributes: ['id', 'name', 'email', 'role'] });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'Profile information', user });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving user profile', error: error.message });
+  }
 });
 
 module.exports = router;
