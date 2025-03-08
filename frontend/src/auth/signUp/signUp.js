@@ -10,8 +10,7 @@ function SignUp() {
     role: 'customer', // Default role is customer
   });
 
-  const [pharmacistID, setPharmacistID] = useState(null); // For Pharmacist ID
-  const [customerID, setCustomerID] = useState(null); // For Customer ID
+  const [userID, setUserID] = useState(null); // Store Pharmacist/Customer ID
   const [message, setMessage] = useState(''); // Message display
   const [error, setError] = useState(''); // Error display
 
@@ -30,16 +29,15 @@ function SignUp() {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/signup', user);
 
-      // Check if pharmacistID exists in the response (pharmacist registration)
-      if (response.data.pharmacistID) {
-        setPharmacistID(response.data.pharmacistID); // Set Pharmacist ID
-        setMessage('Pharmacist registered successfully! Here is your Pharmacist ID.');
-      } 
-      
-      // Check if customerID exists in the response (customer registration)
-      else if (response.data.customerID) {
-        setCustomerID(response.data.customerID); // Set Customer ID
-        setMessage('Customer registered successfully! Here is your Customer ID.');
+      // Extract user data
+      const { pharmacistID, customerID } = response.data.user || {};
+      const generatedID = pharmacistID || customerID;
+
+      if (generatedID) {
+        setUserID(generatedID);
+        setMessage(`Registration successful! Your ID for login: ${generatedID}`);
+      } else {
+        setMessage('Registration successful!');
       }
 
       // Reset form after successful registration
@@ -51,7 +49,7 @@ function SignUp() {
       });
     } catch (error) {
       console.error('Registration error:', error.response?.data?.message || error.message);
-      setError('Error registering user. Please try again.');
+      setError(error.response?.data?.message || 'Error registering user. Please try again.');
     }
   };
 
@@ -116,23 +114,15 @@ function SignUp() {
         <button type="submit" className="submit-btn">Sign Up</button>
       </form>
 
-      {/* Display message */}
+      {/* Display success or error messages */}
       {message && <p className="message success">{message}</p>}
       {error && <p className="message error">{error}</p>}
 
-      {/* Pharmacist ID Display */}
-      {pharmacistID && (
-        <div className="pharmacist-id-container">
-          <p>Your Pharmacist ID for login access:</p>
-          <strong>{pharmacistID}</strong>
-        </div>
-      )}
-
-      {/* Customer ID Display */}
-      {customerID && (
-        <div className="customer-id-container">
-          <p>Your Customer ID for login access:</p>
-          <strong>{customerID}</strong>
+      {/* Display User ID (either Pharmacist or Customer ID) */}
+      {userID && (
+        <div className="user-id-container">
+          <p>Your Login ID:</p>
+          <strong>{userID}</strong>
         </div>
       )}
     </div>

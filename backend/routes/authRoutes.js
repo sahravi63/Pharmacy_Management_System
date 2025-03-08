@@ -1,30 +1,22 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Sequelize MySQL User model
+const { Op } = require('sequelize');  
+const User = require('../models/User');
+
 const router = express.Router();
 
-// Helper function to generate a JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-};
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-// Helper function to generate a Pharmacist ID
-const generatePharmacistID = () => {
-  return 'PHARM-' + Math.floor(1000 + Math.random() * 9000); // Example pharmacist ID format
-};
+const generatePharmacistID = () => 'PHARM-' + Math.floor(1000 + Math.random() * 9000);
+const generateCustomerID = () => 'CUST-' + Math.floor(1000 + Math.random() * 9000);
 
-// Helper function to generate a Customer ID
-const generateCustomerID = () => {
-  return 'CUST-' + Math.floor(1000 + Math.random() * 9000); // Example customer ID format
-};
-
-// Sign Up Route
+// **User Registration**
 router.post('/signup', async (req, res) => {
   const { name, email, password, role } = req.body;
 
   try {
-    // Check if the user already exists
+    // Check if user already exists
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
@@ -33,77 +25,125 @@ router.post('/signup', async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new user
+    // Generate IDs based on role
+    const pharmacistID = role === 'pharmacist' ? generatePharmacistID() : null;
+    const customerID = role === 'customer' ? generateCustomerID() : null;
+
+    console.log('Generated Pharmacist ID:', pharmacistID);
+    console.log('Generated Customer ID:', customerID);
+
+    // Create user
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
       role,
-      pharmacistID: role === 'pharmacist' ? generatePharmacistID() : null,
-      customerID: role === 'customer' ? generateCustomerID() : null,
+      pharmacistID,
+      customerID,
     });
 
-    // Respond with success, token, and pharmacistID/customerID if applicable
     res.status(201).json({
       message: 'User registered successfully',
       token: generateToken(user.id),
-      pharmacistID: user.pharmacistID,
-      customerID: user.customerID,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        pharmacistID: user.pharmacistID,
+        customerID: user.customerID,
+      },
     });
   } catch (error) {
-    console.error('Error registering user:', error); // Log the error for debugging
+    console.error('Error registering user:', error);
     res.status(500).json({ message: 'Error registering user', error: error.message });
   }
 });
 
-// Login Route
-router.post('/login', async (req, res) => {
-  const { email, password, role, pharmacistID } = req.body;
+// **Fetch User by ID, PharmacistID, or CustomerID**
+router.get('/user/:identifier', async (req, res) => {
+  const { identifier } = req.params;
+  console.log('Fetching user with identifier:', identifier);
 
   try {
-    // Check if the user exists
-    const user = await User.findOne({ where: { email, role } });
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { id: !isNaN(identifier) ? Number(identifier) : null }, 
+          { pharmacistID: identifier }, 
+          { customerID: identifier }
+        ],
+      },
+      attributes: ['id', 'name', 'email', 'role', 'pharmacistID', 'customerID'],
+    });
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Pharmacist role check
-    if (role === 'pharmacist' && user.pharmacistID !== pharmacistID) {
-      return res.status(400).json({ message: 'Invalid Pharmacist ID' });
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Error retrieving user details', error: error.message });
+  }
+});
+
+// **Login Route**
+router.post('/login', async (req, res) => {
+  const { email, password, pharmacistID, customerID } = req.body;
+
+  try {
+    let user;
+    
+    if (email) {
+      user = await User.findOne({ where: { email } });
+    } else if (pharmacistID) {
+      user = await User.findOne({ where: { pharmacistID } });
+    } else if (customerID) {
+      user = await User.findOne({ where: { customerID } });
     }
 
-    // Compare the provided password with the hashed password in the database
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate a JWT token
-    const token = generateToken(user.id);
-
-    // Respond with the token
-    res.json({ token });
+    res.json({ 
+      token: generateToken(user.id),
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        pharmacistID: user.pharmacistID,
+        customerID: user.customerID,
+      },
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Middleware to protect routes (only logged-in users can access)
+// **Middleware to Protect Routes**
 const protect = (req, res, next) => {
   let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (!req.headers.authorization) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
+  }
+
+  if (req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Get token from the header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify the token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Attach the user ID to the request object
       req.user = decoded.id;
-
       next();
     } catch (error) {
       return res.status(401).json({ message: 'Not authorized, token failed' });
@@ -115,10 +155,10 @@ const protect = (req, res, next) => {
   }
 };
 
-// Protected route to get the user profile
+// **Fetch User Profile**
 router.get('/profile', protect, async (req, res) => {
   try {
-    const user = await User.findByPk(req.user, { attributes: ['id', 'name', 'email', 'role'] });
+    const user = await User.findByPk(req.user, { attributes: ['id', 'name', 'email', 'role', 'pharmacistID', 'customerID'] });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });

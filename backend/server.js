@@ -5,7 +5,9 @@ const medicineRoutes = require('./routes/medicineRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const customer_ProfileRoutes= require('./routes/customer_profileRoutes');
 const sales_routes = require('./routes/salesRoutes');
+const pharmacist = require('./routes/pharmacistRoutes');
 const { connectDB, sequelize } = require('./config/db');
+const Pharmacist = require('./models/pharmacist');
 require('dotenv').config();
 
 const app = express();
@@ -25,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customer', customer_ProfileRoutes);
+app.use('./api/pharmacist',Pharmacist);
 app.use('/api/sales', sales_routes);
 
 // Prevent Sequelize from attempting to drop columns that don't exist

@@ -1,64 +1,103 @@
 const express = require('express');
 const router = express.Router();
-
-// Import your customer model
+const authenticate = require('../middleware/authMiddleware');
 const Customer = require('../models/customer');
 
-
-router.get('/profile', async (req, res) => {
+// Get customer profile
+router.get('/profile', authenticate, async (req, res) => {
   try {
-   
-    const customerId = req.user._id;
+    console.log("Decoded User Object:", req.user); // Debugging
 
-    const customer = await Customer.findById(customerId);
+    const customerId = req.user?.id;
+    if (!customerId) {
+      return res.status(401).json({ message: 'Unauthorized: No customer ID found' });
+    }
+
+    const customer = await Customer.findByPk(customerId, {
+      attributes: ['id', 'name', 'email', 'phone', 'address']
+    });
+
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    res.json(customer);
+    res.json({ message: 'Profile information', user: customer });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-
-router.put('/profile', async (req, res) => {
+// Update customer profile
+router.post('/profile', authenticate, async (req, res) => {
   const { name, email, phone, address } = req.body;
 
   try {
-    const customerId = req.user._id; 
-    const customer = await Customer.findById(customerId);
+    const customerId = req.user?.id;
+    if (!customerId) {
+      return res.status(401).json({ message: 'Unauthorized: No customer ID found' });
+    }
 
+    const customer = await Customer.findByPk(customerId);
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    
+    // Prevent email duplication
+    if (email && email !== customer.email) {
+      const existingEmail = await Customer.findOne({ where: { email } });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+      customer.email = email;
+    }
+
+    // Update customer fields
     customer.name = name || customer.name;
-    customer.email = email || customer.email;
     customer.phone = phone || customer.phone;
     customer.address = address || customer.address;
 
-    const updatedCustomer = await customer.save();
-    res.json(updatedCustomer);
+    // Save updated customer
+    await customer.save();
+    res.json({ message: 'Profile updated successfully', customer });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
 
+// Update customer profile
+router.put('/profile', authenticate, async (req, res) => {
+  const { name, email, phone, address } = req.body;
 
-router.get('/orders', async (req, res) => {
   try {
-    const customerId = req.user._id; 
-    const orders = await Order.find({ customerId }); 
-
-    if (!orders) {
-      return res.status(404).json({ message: 'No orders found' });
+    const customerId = req.user?.id;
+    if (!customerId) {
+      return res.status(401).json({ message: 'Unauthorized: No customer ID found' });
     }
 
-    res.json(orders);
+    const customer = await Customer.findByPk(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    // Prevent email duplication
+    if (email && email !== customer.email) {
+      const existingEmail = await Customer.findOne({ where: { email } });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+      customer.email = email;
+    }
+
+    // Update customer fields
+    customer.name = name || customer.name;
+    customer.phone = phone || customer.phone;
+    customer.address = address || customer.address;
+
+    // Save updated customer
+    await customer.save();
+    res.json({ message: 'Profile updated successfully', customer });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ message: err.message });
   }
 });
 

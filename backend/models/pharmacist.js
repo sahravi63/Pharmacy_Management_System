@@ -1,6 +1,8 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
-const Customer = sequelize.define('Customer', {
+
+// Define the Pharmacist schema using Sequelize
+const Pharmacist = sequelize.define('Pharmacist', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -14,10 +16,21 @@ const Customer = sequelize.define('Customer', {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
+    validate: {
+      isEmail: true,
+    },
   },
   phone: {
     type: DataTypes.STRING,
     allowNull: true,
+    validate: {
+      is: /^[0-9]{10,15}$/i, // Validates phone number format (optional)
+    },
+  },
+  licenseNumber: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
   },
   address: {
     type: DataTypes.STRING,
@@ -27,13 +40,20 @@ const Customer = sequelize.define('Customer', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+  updatedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
 }, {
-  timestamps: false,
+  timestamps: true, // Enables createdAt and updatedAt fields
 });
 
-
-module.exports = Customer;
+module.exports = Pharmacist;
