@@ -6,7 +6,7 @@ function CustomerProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '' });
+  const [formData, setFormData] = useState({ phone: '', address: '' });
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
@@ -33,8 +33,6 @@ function CustomerProfile() {
         const profileData = await profileResponse.json();
         setCustomer(profileData.user);
         setFormData({
-          name: profileData.user.name || '',
-          email: profileData.user.email || '',
           phone: profileData.user.phone || '',
           address: profileData.user.address || '',
         });
@@ -95,12 +93,6 @@ function CustomerProfile() {
       {isEditing ? (
         <div className="edit-profile">
           <label>
-            Name: <input type="text" name="name" value={formData.name} onChange={handleChange} />
-          </label>
-          <label>
-            Email: <input type="email" name="email" value={formData.email} onChange={handleChange} />
-          </label>
-          <label>
             Phone: <input type="text" name="phone" value={formData.phone} onChange={handleChange} />
           </label>
           <label>
@@ -110,12 +102,19 @@ function CustomerProfile() {
           <button onClick={() => setIsEditing(false)}>Cancel</button>
         </div>
       ) : (
-        <div className="profile-info">
-          <h3>Profile Information</h3>
-          <p><strong>Name:</strong> {customer.name}</p>
-          <p><strong>Email:</strong> {customer.email}</p>
-          <p><strong>Phone:</strong> {customer.phone}</p>
-          <p><strong>Address:</strong> {customer.address}</p>
+        <div className="profile-details">
+          <p><strong>Name:</strong> {customer?.name}</p>
+          <p><strong>Email:</strong> {customer?.email}</p>
+
+          {/* Conditionally render customerID or pharmacistID based on user role */}
+          {customer?.role === 'customer' ? (
+            <p><strong>CustomerID:</strong> {customer?.customerID}</p>
+          ) : customer?.role === 'pharmacist' ? (
+            <p><strong>PharmacistID:</strong> {customer?.pharmacistID}</p>
+          ) : null}
+
+          <p><strong>Phone:</strong> {customer?.phone || 'N/A'}</p>
+          <p><strong>Address:</strong> {customer?.address || 'N/A'}</p>
           <button onClick={handleEdit}>Edit Profile</button>
         </div>
       )}

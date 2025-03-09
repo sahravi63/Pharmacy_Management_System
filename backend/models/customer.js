@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
+
 const Customer = sequelize.define('Customer', {
   id: {
     type: DataTypes.INTEGER,
@@ -11,6 +12,11 @@ const Customer = sequelize.define('Customer', {
     allowNull: false,
   },
   email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  customerID: {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
@@ -34,6 +40,5 @@ const Customer = sequelize.define('Customer', {
 }, {
   timestamps: false,
 });
-
 
 module.exports = Customer;
