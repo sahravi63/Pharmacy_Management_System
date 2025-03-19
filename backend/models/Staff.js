@@ -2,8 +2,8 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 const User = require('./User');
 
-const Pharmacist = sequelize.define('Pharmacist', {
-  pharmacistID: {
+const Staff = sequelize.define('Staff', {
+  staffID: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     references: {
@@ -15,19 +15,14 @@ const Pharmacist = sequelize.define('Pharmacist', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  licenseNumber: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-  },
   address: {
     type: DataTypes.STRING,
     allowNull: true,
   },
 }, {
-  timestamps: true,
+  timestamps: false,
 });
 
-Pharmacist.belongsTo(User, { foreignKey: 'pharmacistID' });
+Staff.belongsTo(User, { foreignKey: 'staffID' });
 
-module.exports = Pharmacist;
+module.exports = Staff;
