@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -14,11 +15,17 @@ const pharmacistRoutes = require('./routes/pharmacistRoutes');
 const sequelize = require('./config/db');
 require('./models');
 const dashboardRoutes = require('./routes/dashboard');
+const notificationRoutes = require('./routes/notificationRoutes');
+const initializeSocket = require('./services/socketService');
+const startInventoryScheduler = require('./services/inventoryScheduler');
 
 const app = express();
+const server = http.createServer(app);
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+initializeSocket(server, FRONTEND_URL);
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: FRONTEND_URL,
   credentials: true,
   methods: 'GET,POST,PUT,PATCH,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
@@ -36,6 +43,7 @@ app.use('/api/customer', customer_ProfileRoutes);
 app.use('/api/pharmacist', pharmacistRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Handle 404
 app.use((req, res) => {
@@ -44,12 +52,15 @@ app.use((req, res) => {
 
 // Sync DB
 sequelize.sync({ alter: process.env.NODE_ENV !== 'production' })
-  .then(() => console.log('Database synced successfully!'))
+  .then(() => {
+    console.log('Database synced successfully!');
+    startInventoryScheduler();
+  })
   .catch((error) => console.error('Error syncing database:', error));
 
 // Start server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 

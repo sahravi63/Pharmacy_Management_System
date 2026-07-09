@@ -28,16 +28,6 @@ const Medicine = sequelize.define('Medicine', {
     type: DataTypes.DATE,
     allowNull: true,
   },
-
-  orderId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'Orders', // Make sure this matches the table name
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
-  },
 }, {
   timestamps: true,
 });

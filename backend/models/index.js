@@ -5,6 +5,7 @@ const Staff = require('./Staff');
 const Medicine = require('./Medicine');
 const Order = require('./order');
 const { Sales, SalesItems } = require('./sales');
+const Notification = require('./Notification');
 
 User.hasOne(Customer, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Customer.belongsTo(User, { foreignKey: 'userId' });
@@ -15,11 +16,8 @@ Pharmacist.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Staff, { foreignKey: 'id', onDelete: 'CASCADE' });
 Staff.belongsTo(User, { foreignKey: 'id' });
 
-Order.hasMany(Medicine, {
-  foreignKey: 'orderId',
-  onDelete: 'CASCADE',
-});
-Medicine.belongsTo(Order, { foreignKey: 'orderId' });
+Medicine.hasMany(Notification, { foreignKey: 'medicineId', onDelete: 'SET NULL' });
+Notification.belongsTo(Medicine, { foreignKey: 'medicineId' });
 
 module.exports = {
   User,
@@ -30,4 +28,5 @@ module.exports = {
   Order,
   Sales,
   SalesItems,
+  Notification,
 };
