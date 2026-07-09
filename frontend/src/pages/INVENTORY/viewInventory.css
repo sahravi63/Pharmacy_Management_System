@@ -1,0 +1,78 @@
+/* Container for the inventory view */
+.inventory-container {
+    margin: 20px auto;
+    padding: 20px;
+    max-width: 1000px;
+    background-color: #f8f9fa; /* Light background */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  /* Heading for the inventory */
+  .inventory-heading {
+    text-align: center;
+    font-size: 2rem;
+    color: #343a40; /* Darker font color */
+    margin-bottom: 20px;
+  }
+  
+  /* Table styling for the inventory list */
+  .inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .inventory-table th,
+  .inventory-table td {
+    padding: 12px 15px;
+    text-align: left;
+  }
+  
+  .inventory-table th {
+    background-color: #007bff; /* Blue header */
+    color: white;
+    font-size: 1.1rem;
+  }
+  
+  .inventory-table td {
+    background-color: #ffffff; /* White table rows */
+    border-bottom: 1px solid #dee2e6; /* Light border */
+  }
+  
+  /* Alternate row color for better readability */
+  .inventory-table tr:nth-child(even) {
+    background-color: #f1f3f5;
+  }
+  
+  /* Button styling */
+  .inventory-button {
+    padding: 8px 16px;
+    background-color: #28a745; /* Green button */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .inventory-button:hover {
+    background-color: #218838; /* Darker green on hover */
+  }
+  
+  /* Media query for responsiveness */
+  @media (max-width: 768px) {
+    .inventory-container {
+      padding: 15px;
+    }
+  
+    .inventory-table th, .inventory-table td {
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+  
+    .inventory-heading {
+      font-size: 1.5rem;
+    }
+  }
+  

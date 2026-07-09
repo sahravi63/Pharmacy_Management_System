@@ -1,0 +1,36 @@
+.sales-report-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .filter-container {
+    margin-bottom: 20px;
+  }
+  
+  .filter-container label {
+    margin-right: 10px;
+  }
+  
+  .sales-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .sales-report-table th, .sales-report-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .sales-report-table th {
+    background-color: #f4f4f4;
+  }
+  
+  .total-revenue {
+    margin-top: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  
