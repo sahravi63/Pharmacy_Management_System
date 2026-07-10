@@ -12,6 +12,16 @@ const Order = sequelize.define('Order', {
     allowNull: false
   },
 
+  medicineId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Medicines',
+      key: 'id',
+    },
+    onDelete: 'SET NULL',
+  },
+
   quantity: {
     type: DataTypes.INTEGER,
     allowNull: false

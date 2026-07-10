@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -16,12 +17,23 @@ const sequelize = require('./config/db');
 require('./models');
 const dashboardRoutes = require('./routes/dashboard');
 const notificationRoutes = require('./routes/notificationRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
+const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const initializeSocket = require('./services/socketService');
 const startInventoryScheduler = require('./services/inventoryScheduler');
 
 const app = express();
 const server = http.createServer(app);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts, please try again later.' },
+});
+
 initializeSocket(server, FRONTEND_URL);
 
 app.use(cors({
@@ -36,6 +48,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/orders', orderRoutes);
@@ -44,6 +57,9 @@ app.use('/api/pharmacist', pharmacistRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 
 // Handle 404
 app.use((req, res) => {

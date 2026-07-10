@@ -6,6 +6,7 @@ const { Sales } = require('../models/sales');
 const authenticate = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const { Op, fn, col } = require('sequelize');
+const { getLowStockThreshold } = require('../utils/stockConfig');
 
 // GET /dashboard/summary
 router.get('/summary', authenticate, requireRole('admin', 'pharmacist'), async (req, res) => {
@@ -14,8 +15,9 @@ router.get('/summary', authenticate, requireRole('admin', 'pharmacist'), async (
 
     const totalMedicines = await Medicine.count();
 
+    const lowStockThreshold = getLowStockThreshold();
     const lowStockMedicines = await Medicine.count({
-      where: { stock: { [Op.lt]: 100 } },
+      where: { stock: { [Op.lte]: lowStockThreshold } },
     });
 
     const totalSales = await Sales.sum('totalAmount');

@@ -5,10 +5,11 @@ import api from '../../services/api';
 function Orders({ user }) {
   // State for existing orders fetched from the backend
   const [orders, setOrders] = useState([]);
+  const isCustomer = user?.role === 'customer';
 
   // State for new order form
   const [newOrder, setNewOrder] = useState({
-    customerName: '',
+    customerName: isCustomer ? user?.name || '' : '',
     medicine: '',
     quantity: 1,
   });
@@ -38,16 +39,21 @@ function Orders({ user }) {
 
   // Handle adding a new order
   const handleAddOrder = async () => {
+    if (isCustomer && !newOrder.customerName) {
+      setNewOrder((current) => ({ ...current, customerName: user?.name || '' }));
+    }
+
     try {
       const order = {
         ...newOrder,
+        customerName: isCustomer ? (newOrder.customerName || user?.name || '') : newOrder.customerName,
         status: 'Pending',
       };
 
       const response = await api.post('/orders', order);
       setOrders([...orders, response.data]);
       setNewOrder({
-        customerName: '',
+        customerName: isCustomer ? user?.name || '' : '',
         medicine: '',
         quantity: 1,
       });
@@ -76,16 +82,18 @@ function Orders({ user }) {
       {/* New Order Form */}
       <div className="order-form">
         <h3>Place a New Order</h3>
-        <label>
-          Customer Name:
-          <input
-            type="text"
-            name="customerName"
-            value={newOrder.customerName}
-            onChange={handleChange}
-            placeholder="Enter customer name"
-          />
-        </label>
+        {!isCustomer && (
+          <label>
+            Customer Name:
+            <input
+              type="text"
+              name="customerName"
+              value={newOrder.customerName}
+              onChange={handleChange}
+              placeholder="Enter customer name"
+            />
+          </label>
+        )}
         <label>
           Medicine:
           <input

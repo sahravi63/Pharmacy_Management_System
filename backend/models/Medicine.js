@@ -6,6 +6,7 @@ const Medicine = sequelize.define('Medicine', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    unique: true,
   },
 
   description: {
@@ -26,6 +27,17 @@ const Medicine = sequelize.define('Medicine', {
 
   expiryDate: {
     type: DataTypes.DATE,
+    allowNull: true,
+  },
+
+  requiresPrescription: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+
+  prescriptionNotes: {
+    type: DataTypes.TEXT,
     allowNull: true,
   },
 }, {

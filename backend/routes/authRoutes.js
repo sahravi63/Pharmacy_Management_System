@@ -56,7 +56,14 @@ router.post('/signup', async (req, res) => {
       customerID,
     });
 
-    if (role === 'pharmacist') {
+    if (role === 'admin') {
+      await Pharmacist.create({
+        userId: newUser.id,
+        name,
+        email,
+        pharmacistID: pharmacistID || generatePharmacistID(name),
+      });
+    } else if (role === 'pharmacist') {
       await Pharmacist.create({
         userId: newUser.id,
         name,
@@ -100,7 +107,9 @@ router.post('/login', async (req, res) => {
   try {
     let user = null;
 
-    if (role === 'pharmacist' && pharmacistID) {
+    if (role === 'admin') {
+      user = await User.findOne({ where: { email, role: 'admin' } });
+    } else if (role === 'pharmacist' && pharmacistID) {
       user = await User.findOne({
         where: { pharmacistID, role: 'pharmacist' }
       });

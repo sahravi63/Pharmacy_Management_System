@@ -2,8 +2,8 @@ const { Op } = require('sequelize');
 const Medicine = require('../models/Medicine');
 const Notification = require('../models/Notification');
 const { sendNotificationEmail } = require('./emailService');
+const { getLowStockThreshold, getExpiryAlertDays } = require('../utils/stockConfig');
 
-const DEFAULT_LOW_STOCK_THRESHOLD = Number(process.env.LOW_STOCK_THRESHOLD) || 10;
 let io = null;
 
 const setNotificationSocket = (socketServer) => {
@@ -45,7 +45,7 @@ const createNotification = async ({ type, title, message, medicineId = null, met
 };
 
 const notifyStockLevel = async (medicine, options = {}) => {
-  const threshold = Number(process.env.LOW_STOCK_THRESHOLD) || DEFAULT_LOW_STOCK_THRESHOLD;
+  const threshold = getLowStockThreshold();
 
   if (Number(medicine.stock) <= 0) {
     return createNotification({
@@ -85,10 +85,10 @@ const notifyRestock = async (medicine, previousStock, options = {}) => {
 };
 
 const checkInventoryAlerts = async () => {
-  const threshold = Number(process.env.LOW_STOCK_THRESHOLD) || DEFAULT_LOW_STOCK_THRESHOLD;
+  const threshold = getLowStockThreshold();
   const now = new Date();
   const expiryLimit = new Date();
-  expiryLimit.setDate(now.getDate() + (Number(process.env.EXPIRY_ALERT_DAYS) || 30));
+  expiryLimit.setDate(now.getDate() + getExpiryAlertDays());
 
   const lowStock = await Medicine.findAll({
     where: { stock: { [Op.lte]: threshold } },

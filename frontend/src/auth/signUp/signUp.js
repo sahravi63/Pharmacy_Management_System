@@ -107,6 +107,7 @@ function SignUp() {
           >
             <option value="customer">Customer</option>
             <option value="pharmacist">Pharmacist</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
 

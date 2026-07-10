@@ -26,6 +26,15 @@ const SalesItems = sequelize.define('SalesItems', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  medicineId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Medicines',
+      key: 'id',
+    },
+    onDelete: 'SET NULL',
+  },
   quantity: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -41,5 +50,6 @@ const SalesItems = sequelize.define('SalesItems', {
 // Relationship
 Sales.hasMany(SalesItems, { as: 'itemsSold', foreignKey: 'saleId', onDelete: 'CASCADE' });
 SalesItems.belongsTo(Sales, { foreignKey: 'saleId' });
+SalesItems.belongsTo(require('./Medicine'), { foreignKey: 'medicineId' });
 
 module.exports = { Sales, SalesItems };

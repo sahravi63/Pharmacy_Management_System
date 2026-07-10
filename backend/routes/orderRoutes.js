@@ -6,6 +6,7 @@ const authenticate = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const sequelize = require('../config/db');
 const { createNotification, notifyStockLevel } = require('../services/notificationService');
+const { resolveOrderCustomerName } = require('../utils/orderCustomerName');
 
 const VALID_STATUSES = ['Pending', 'Processing', 'Delivered', 'Cancelled'];
 const STOCK_RESERVED_STATUSES = ['Pending', 'Processing', 'Delivered'];
@@ -20,18 +21,27 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 router.post('/', authenticate, async (req, res) => {
-  const { customerName, medicine, quantity } = req.body;
+  const { customerName, medicine, medicineId, quantity } = req.body;
   const parsedQuantity = Number(quantity);
+  const resolvedCustomerName = resolveOrderCustomerName({
+    role: req.user?.role,
+    userName: req.user?.name,
+    providedCustomerName: customerName,
+  });
 
-  if (!customerName || !medicine || !Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
-    return res.status(400).json({ message: 'Customer name, medicine, and a positive quantity are required' });
+  if (!medicine || !Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+    return res.status(400).json({ message: 'Medicine and a positive quantity are required' });
+  }
+
+  if (req.user?.role !== 'customer' && !resolvedCustomerName) {
+    return res.status(400).json({ message: 'Customer name is required' });
   }
 
   const transaction = await sequelize.transaction();
 
   try {
     const medicineRecord = await Medicine.findOne({
-      where: { name: medicine },
+      where: medicineId ? { id: medicineId } : { name: medicine },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -51,8 +61,9 @@ router.post('/', authenticate, async (req, res) => {
 
     const totalPrice = parsedQuantity * Number(medicineRecord.price);
     const newOrder = await Order.create({
-      customerName,
+      customerName: resolvedCustomerName,
       medicine: medicineRecord.name,
+      medicineId: medicineRecord.id,
       quantity: parsedQuantity,
       totalPrice,
       status: 'Pending',
@@ -61,7 +72,7 @@ router.post('/', authenticate, async (req, res) => {
     await createNotification({
       type: 'order',
       title: 'Order placed',
-      message: `${parsedQuantity} units of ${medicineRecord.name} reserved for ${customerName}.`,
+      message: `${parsedQuantity} units of ${medicineRecord.name} reserved for ${resolvedCustomerName}.`,
       medicineId: medicineRecord.id,
       metadata: { orderId: newOrder.id, quantity: parsedQuantity, stock: medicineRecord.stock },
     }, { transaction });
@@ -95,7 +106,7 @@ router.patch('/:id', authenticate, requireRole('admin', 'pharmacist'), async (re
     }
 
     const medicineRecord = await Medicine.findOne({
-      where: { name: order.medicine },
+      where: order.medicineId ? { id: order.medicineId } : { name: order.medicine },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });

@@ -14,13 +14,15 @@ const normalizeItems = (itemsSold = []) => {
 
   for (const item of itemsSold) {
     const name = String(item.name || '').trim();
+    const medicineId = item.medicineId ? Number(item.medicineId) : null;
     const quantity = Number(item.quantity);
 
     if (!name || !Number.isInteger(quantity) || quantity <= 0) {
       return { error: 'Each item must include a name and positive integer quantity' };
     }
 
-    const existing = itemsByName.get(name) || { name, quantity: 0 };
+    const existing = itemsByName.get(name) || { name, medicineId, quantity: 0 };
+    existing.medicineId = existing.medicineId || medicineId;
     existing.quantity += quantity;
     itemsByName.set(name, existing);
   }
@@ -33,7 +35,7 @@ const lockMedicinesForItems = async (items, transaction) => {
 
   for (const item of items) {
     const medicine = await Medicine.findOne({
-      where: { name: item.name },
+      where: item.medicineId ? { id: item.medicineId } : { name: item.name },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -62,6 +64,7 @@ const deductStockForItems = async (items, transaction) => {
     await medicine.save({ transaction });
     saleItems.push({
       name: medicine.name,
+      medicineId: medicine.id,
       quantity: item.quantity,
       price: Number(medicine.price),
       medicine,
@@ -79,7 +82,7 @@ const restoreStockForSale = async (saleId, transaction) => {
 
   for (const item of existingItems) {
     const medicine = await Medicine.findOne({
-      where: { name: item.name },
+      where: item.medicineId ? { id: item.medicineId } : { name: item.name },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -122,6 +125,7 @@ router.post('/', requireRole('admin', 'pharmacist'), async (req, res) => {
 
     await Promise.all(saleItems.map(item => SalesItems.create({
       name: item.name,
+      medicineId: item.medicineId,
       quantity: item.quantity,
       price: item.price,
       saleId: newSale.id,
@@ -152,9 +156,14 @@ router.post('/', requireRole('admin', 'pharmacist'), async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
+    const { q, limit = 100, offset = 0 } = req.query;
+    const where = q ? { customerName: { [sequelize.Op.like]: `%${q}%` } } : undefined;
     const sales = await Sales.findAll({
+      where,
       include: [{ model: SalesItems, as: 'itemsSold' }],
       order: [['createdAt', 'DESC']],
+      limit: Number(limit),
+      offset: Number(offset),
     });
 
     res.json(sales);
@@ -210,6 +219,7 @@ router.put('/:id', requireRole('admin', 'pharmacist'), async (req, res) => {
 
       await Promise.all(saleItems.map(item => SalesItems.create({
         name: item.name,
+        medicineId: item.medicineId,
         quantity: item.quantity,
         price: item.price,
         saleId: sale.id,

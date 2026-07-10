@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import './Dashboard.css'; // Optional: for styling
+import NotificationsPanel from '../components/NotificationsPanel';
+import './Dashboard.css';
 
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState({
@@ -42,13 +43,14 @@ function Dashboard() {
   return (
     <div className="dashboard">
       <h1>Pharmacy Management Dashboard</h1>
+      <NotificationsPanel user={{ role: 'admin' }} />
       <div className="dashboard-overview">
         <div className="card">
           <h3>Total Medicines</h3>
           <p>{totalMedicines}</p>
         </div>
         <div className="card">
-          <h3>Low Stock (&lt;100)</h3>
+          <h3>Low Stock (&le;10)</h3>
           <p>{lowStockCount}</p>
         </div>
         <div className="card">

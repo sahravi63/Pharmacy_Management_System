@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SignUp from './auth/signUp/signUp';
 import Login from './auth/login/login';
@@ -19,6 +20,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const verifySession = async () => {
@@ -37,6 +39,20 @@ function App() {
     verifySession();
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', { withCredentials: true });
+    socket.on('connect', () => {
+      socket.emit('notifications:join');
+    });
+    socket.on('notification:new', (notification) => {
+      setNotifications((current) => [notification, ...current]);
+    });
+
+    return () => socket.disconnect();
+  }, [isAuthenticated]);
+
   const handleAuthenticated = (profile) => {
     setUser(profile);
     setIsAuthenticated(true);
@@ -52,7 +68,9 @@ function App() {
   const ProtectedRoute = ({ children, roles }) => {
     if (!authChecked) return null;
     if (!isAuthenticated) return <Navigate to="/" />;
-    if (roles && !roles.includes(user?.role)) return <Navigate to={defaultPath} />;
+    if (roles && !roles.includes(user?.role)) {
+      return <Navigate to={defaultPath} replace />;
+    }
     return children;
   };
 
@@ -67,7 +85,7 @@ function App() {
               <Route path="/" element={isAuthenticated ? <Navigate to={defaultPath} /> : <Home />} />
               <Route path="/dashboard" element={<ProtectedRoute roles={['admin', 'pharmacist']}><Dashboard /></ProtectedRoute>} />
               <Route path="/add-medicine" element={<ProtectedRoute roles={['admin', 'pharmacist']}><AddMedicine /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute><ViewInventory /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><ViewInventory user={user} /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders user={user} /></ProtectedRoute>} />
               <Route path="/Orders" element={<Navigate to="/orders" />} />
               <Route path="/sales-report" element={<ProtectedRoute roles={['admin', 'pharmacist']}><SalesReport /></ProtectedRoute>} />

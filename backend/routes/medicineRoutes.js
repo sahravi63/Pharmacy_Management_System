@@ -4,7 +4,10 @@ const Medicine = require('../models/Medicine');
 const authenticate = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const sequelize = require('../config/db');
+const { Op } = require('sequelize');
+const Batch = require('../models/Batch');
 const { createNotification, notifyRestock, notifyStockLevel } = require('../services/notificationService');
+const { createBatchEntry } = require('../utils/inventoryUtils');
 
 const validateMedicine = ({ name, price, stock }) => {
   if (!name || typeof name !== 'string') return 'Medicine name is required';
@@ -14,20 +17,38 @@ const validateMedicine = ({ name, price, stock }) => {
 };
 
 router.post('/add', authenticate, requireRole('admin', 'pharmacist'), async (req, res) => {
-  const { name, description, price, stock, expiryDate } = req.body;
+  const { name, description, price, stock, expiryDate, requiresPrescription, prescriptionNotes } = req.body;
   const validationError = validateMedicine(req.body);
   if (validationError) return res.status(400).json({ message: validationError });
 
   const transaction = await sequelize.transaction();
 
   try {
+    const existingMedicine = await Medicine.findOne({ where: { name: name.trim() } });
+    if (existingMedicine) {
+      await transaction.rollback();
+      return res.status(409).json({ message: 'A medicine with this name already exists' });
+    }
+
     const medicine = await Medicine.create({
       name: name.trim(),
       description,
       price: Number(price),
       stock: Number(stock),
       expiryDate,
+      requiresPrescription: Boolean(requiresPrescription),
+      prescriptionNotes,
     }, { transaction });
+
+    if (Number(stock) > 0 && expiryDate) {
+      await Batch.create(createBatchEntry({
+        medicineId: medicine.id,
+        batchNo: `AUTO-${medicine.id}`,
+        expiryDate,
+        quantity: Number(stock),
+        costPrice: Number(price),
+      }), { transaction });
+    }
 
     await notifyStockLevel(medicine, { transaction });
     await transaction.commit();
@@ -41,7 +62,14 @@ router.post('/add', authenticate, requireRole('admin', 'pharmacist'), async (req
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    const medicines = await Medicine.findAll({ order: [['name', 'ASC']] });
+    const { q, limit = 100, offset = 0 } = req.query;
+    const where = q ? { name: { [Op.like]: `%${q}%` } } : undefined;
+    const medicines = await Medicine.findAll({
+      where,
+      order: [['name', 'ASC']],
+      limit: Number(limit),
+      offset: Number(offset),
+    });
     res.status(200).json(medicines);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching medicines', error: error.message });
@@ -82,6 +110,8 @@ router.put('/:id', authenticate, requireRole('admin', 'pharmacist'), async (req,
       price: Number(req.body.price),
       stock: Number(req.body.stock),
       expiryDate: req.body.expiryDate,
+      requiresPrescription: Boolean(req.body.requiresPrescription),
+      prescriptionNotes: req.body.prescriptionNotes,
     }, { transaction });
 
     await notifyRestock(medicine, previousStock, { transaction });
