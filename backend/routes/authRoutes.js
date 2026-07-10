@@ -1,26 +1,34 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const User = require('../models/User');
 const Pharmacist = require('../models/pharmacist');
 const Customer = require('../models/customer');
 const authenticate = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
-const generateToken = require('../utils/generateToken');
+const { createTokenPair, hashToken, compareToken } = require('../utils/generateToken');
 
 const router = express.Router();
 
-// ENV check
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is not defined');
 }
 
+const getCookieValue = (cookieHeader = '', cookieName) => {
+  const cookies = cookieHeader.split(';').map((cookie) => cookie.trim());
+  const entry = cookies.find((cookie) => cookie.startsWith(`${cookieName}=`));
+  return entry ? decodeURIComponent(entry.split('=').slice(1).join('=')) : null;
+};
+
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
-  maxAge: 1000 * 60 * 60,
+  sameSite: 'lax',
 };
+
+const accessCookieOptions = { ...cookieOptions, maxAge: 1000 * 60 * 15 };
+const refreshCookieOptions = { ...cookieOptions, maxAge: 1000 * 60 * 60 * 24 * 7 };
 
 const generatePharmacistID = (name) =>
   `PH-${name.slice(0, 4).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -28,9 +36,11 @@ const generatePharmacistID = (name) =>
 const generateCustomerID = (name) =>
   `CU-${name.slice(0, 4).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`;
 
-// =============================
-// Signup
-// =============================
+const setTokenCookies = (res, accessToken, refreshToken) => {
+  res.cookie('token', accessToken, accessCookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+};
+
 router.post('/signup', async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -43,7 +53,6 @@ router.post('/signup', async (req, res) => {
     if (userExists) return res.status(400).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const pharmacistID = role === 'pharmacist' ? generatePharmacistID(name) : null;
     const customerID = role === 'customer' ? generateCustomerID(name) : null;
 
@@ -57,30 +66,16 @@ router.post('/signup', async (req, res) => {
     });
 
     if (role === 'admin') {
-      await Pharmacist.create({
-        userId: newUser.id,
-        name,
-        email,
-        pharmacistID: pharmacistID || generatePharmacistID(name),
-      });
+      await Pharmacist.create({ userId: newUser.id, name, email, pharmacistID: pharmacistID || generatePharmacistID(name) });
     } else if (role === 'pharmacist') {
-      await Pharmacist.create({
-        userId: newUser.id,
-        name,
-        email,
-        pharmacistID,
-      });
+      await Pharmacist.create({ userId: newUser.id, name, email, pharmacistID });
     } else if (role === 'customer') {
-      await Customer.create({
-        userId: newUser.id,
-        name,
-        email,
-        customerID,
-      });
+      await Customer.create({ userId: newUser.id, name, email, customerID });
     }
 
-    const token = generateToken(newUser);
-    res.cookie('token', token, cookieOptions);
+    const { accessToken, refreshToken } = await createTokenPair(newUser);
+    await User.update({ refreshToken: await hashToken(refreshToken) }, { where: { id: newUser.id } });
+    setTokenCookies(res, accessToken, refreshToken);
 
     res.status(201).json({
       message: 'Signup successful',
@@ -94,13 +89,10 @@ router.post('/signup', async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ message: 'Signup failed', error: err.message });
+    res.status(500).json({ message: 'Signup failed' });
   }
 });
 
-// =============================
-// Login
-// =============================
 router.post('/login', async (req, res) => {
   const { email, password, pharmacistID, customerID, role } = req.body;
 
@@ -110,17 +102,11 @@ router.post('/login', async (req, res) => {
     if (role === 'admin') {
       user = await User.findOne({ where: { email, role: 'admin' } });
     } else if (role === 'pharmacist' && pharmacistID) {
-      user = await User.findOne({
-        where: { pharmacistID, role: 'pharmacist' }
-      });
+      user = await User.findOne({ where: { pharmacistID, role: 'pharmacist' } });
     } else if (role === 'customer' && customerID) {
-      user = await User.findOne({
-        where: { customerID, role: 'customer' }
-      });
+      user = await User.findOne({ where: { customerID, role: 'customer' } });
     } else if (email && role) {
-      user = await User.findOne({
-        where: { email, role }
-      });
+      user = await User.findOne({ where: { email, role } });
     } else {
       return res.status(400).json({ message: 'Please provide login credentials' });
     }
@@ -134,8 +120,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    const token = generateToken(user);
-    res.cookie('token', token, cookieOptions);
+    const { accessToken, refreshToken } = await createTokenPair(user);
+    await User.update({ refreshToken: await hashToken(refreshToken) }, { where: { id: user.id } });
+    setTokenCookies(res, accessToken, refreshToken);
 
     return res.json({
       user: {
@@ -145,18 +132,57 @@ router.post('/login', async (req, res) => {
         role: user.role,
         pharmacistID: user.pharmacistID,
         customerID: user.customerID,
-      }
+      },
     });
   } catch (err) {
-    console.error('Login Error:', err);
-    return res.status(500).json({ message: 'Login failed', error: err.message });
+    return res.status(500).json({ message: 'Login failed' });
   }
 });
-// =============================
-// Get User by ID or Custom ID
-// =============================
-router.post('/logout', (req, res) => {
+
+router.post('/refresh', async (req, res) => {
+  const refreshToken = req.body.refreshToken || getCookieValue(req.headers.cookie, 'refreshToken');
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh token missing' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+
+    if (!user?.refreshToken) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    const isMatch = await compareToken(refreshToken, user.refreshToken);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } = await createTokenPair(user);
+    await User.update({ refreshToken: await hashToken(newRefreshToken) }, { where: { id: user.id } });
+    setTokenCookies(res, accessToken, newRefreshToken);
+
+    return res.json({ message: 'Token refreshed' });
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid refresh token' });
+  }
+});
+
+router.post('/logout', async (req, res) => {
+  const refreshToken = req.body.refreshToken || getCookieValue(req.headers.cookie, 'refreshToken');
+
+  if (refreshToken) {
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+      await User.update({ refreshToken: null }, { where: { id: decoded.id } });
+    } catch (err) {
+      // ignore invalid tokens during logout
+    }
+  }
+
   res.clearCookie('token', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
   res.json({ message: 'Logged out' });
 });
 
@@ -178,13 +204,10 @@ router.get('/user/:identifier', authenticate, requireRole('admin', 'pharmacist')
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Error fetching user', error: err.message });
+    res.status(500).json({ message: 'Error fetching user' });
   }
 });
 
-// =============================
-// Authenticated Profile
-// =============================
 router.get('/profile', authenticate, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
@@ -194,7 +217,7 @@ router.get('/profile', authenticate, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ message: 'Profile retrieved', user });
   } catch (err) {
-    res.status(500).json({ message: 'Profile fetch error', error: err.message });
+    res.status(500).json({ message: 'Profile fetch error' });
   }
 });
 

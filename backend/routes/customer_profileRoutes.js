@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authenticate = require('../middleware/authMiddleware');
 const Customer = require('../models/customer');
+const { validateCustomerProfilePayload } = require('../utils/validation');
 
 // GET customer profile
 router.get('/profile', authenticate, async (req, res) => {
@@ -20,6 +21,11 @@ router.get('/profile', authenticate, async (req, res) => {
 
 // POST update customer profile
 router.post('/profile', authenticate, async (req, res) => {
+  const validation = validateCustomerProfilePayload(req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({ message: validation.message });
+  }
+
   const { name, email, phone, address } = req.body;
 
   try {
@@ -45,6 +51,11 @@ router.post('/profile', authenticate, async (req, res) => {
 
 // PUT update customer profile (only phone & address)
 router.put('/profile', authenticate, async (req, res) => {
+  const validation = validateCustomerProfilePayload(req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({ message: validation.message });
+  }
+
   const { phone, address } = req.body;
 
   try {

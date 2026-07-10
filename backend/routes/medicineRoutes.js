@@ -8,6 +8,7 @@ const { Op } = require('sequelize');
 const Batch = require('../models/Batch');
 const { createNotification, notifyRestock, notifyStockLevel } = require('../services/notificationService');
 const { createBatchEntry } = require('../utils/inventoryUtils');
+const { getPaginationOptions } = require('../utils/validation');
 
 const validateMedicine = ({ name, price, stock }) => {
   if (!name || typeof name !== 'string') return 'Medicine name is required';
@@ -56,23 +57,24 @@ router.post('/add', authenticate, requireRole('admin', 'pharmacist'), async (req
     res.status(201).json({ message: 'Medicine added successfully!', medicine });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: 'Error adding medicine', error: error.message });
+    res.status(500).json({ message: 'Error adding medicine' });
   }
 });
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { q, limit = 100, offset = 0 } = req.query;
+    const { q } = req.query;
+    const { limit, offset } = getPaginationOptions(req.query);
     const where = q ? { name: { [Op.like]: `%${q}%` } } : undefined;
     const medicines = await Medicine.findAll({
       where,
       order: [['name', 'ASC']],
-      limit: Number(limit),
-      offset: Number(offset),
+      limit,
+      offset,
     });
     res.status(200).json(medicines);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching medicines', error: error.message });
+    res.status(500).json({ message: 'Error fetching medicines' });
   }
 });
 
@@ -121,7 +123,7 @@ router.put('/:id', authenticate, requireRole('admin', 'pharmacist'), async (req,
     res.json({ message: 'Medicine updated successfully', medicine });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: 'Error updating medicine', error: error.message });
+    res.status(500).json({ message: 'Error updating medicine' });
   }
 });
 
@@ -168,7 +170,7 @@ router.patch('/:id/stock', authenticate, requireRole('admin', 'pharmacist'), asy
     res.json({ message: 'Stock updated successfully', medicine });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: 'Error updating stock', error: error.message });
+    res.status(500).json({ message: 'Error updating stock' });
   }
 });
 
@@ -196,7 +198,7 @@ router.delete('/:id', authenticate, requireRole('admin'), async (req, res) => {
     res.json({ message: 'Medicine deleted successfully' });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: 'Error deleting medicine', error: error.message });
+    res.status(500).json({ message: 'Error deleting medicine' });
   }
 });
 

@@ -4,6 +4,10 @@ const sequelize = require('../config/db');
 
 // Define Sales model
 const Sales = sequelize.define('Sales', {
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
   customerName: {
     type: DataTypes.STRING,
     allowNull: false,

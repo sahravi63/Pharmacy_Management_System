@@ -6,6 +6,7 @@ const authenticate = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const sequelize = require('../config/db');
 const { createNotification, notifyStockLevel } = require('../services/notificationService');
+const { getPaginationOptions } = require('../utils/validation');
 
 router.use(authenticate);
 
@@ -56,6 +57,10 @@ const deductStockForItems = async (items, transaction) => {
 
   for (const item of items) {
     const medicine = medicines.find((record) => record.name === item.name);
+    if (medicine.expiryDate && new Date(medicine.expiryDate) < new Date()) {
+      throw new Error(`${medicine.name} is expired and cannot be sold`);
+    }
+
     if (medicine.stock < item.quantity) {
       throw new Error(`Only ${medicine.stock} units available for ${medicine.name}`);
     }
@@ -121,6 +126,7 @@ router.post('/', requireRole('admin', 'pharmacist'), async (req, res) => {
       date,
       customerName,
       totalAmount,
+      userId: req.user?.id,
     }, { transaction });
 
     await Promise.all(saleItems.map(item => SalesItems.create({
@@ -150,25 +156,31 @@ router.post('/', requireRole('admin', 'pharmacist'), async (req, res) => {
     res.status(201).json(sale);
   } catch (error) {
     await transaction.rollback();
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: 'Unable to create sale' });
   }
 });
 
 router.get('/', async (req, res) => {
   try {
-    const { q, limit = 100, offset = 0 } = req.query;
+    const { q } = req.query;
+    const { limit, offset } = getPaginationOptions(req.query);
     const where = q ? { customerName: { [sequelize.Op.like]: `%${q}%` } } : undefined;
+
+    const whereClause = req.user.role === 'customer'
+      ? { userId: req.user.id }
+      : where;
+
     const sales = await Sales.findAll({
-      where,
+      where: whereClause,
       include: [{ model: SalesItems, as: 'itemsSold' }],
       order: [['createdAt', 'DESC']],
-      limit: Number(limit),
-      offset: Number(offset),
+      limit,
+      offset,
     });
 
     res.json(sales);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -179,10 +191,13 @@ router.get('/:id', async (req, res) => {
     });
 
     if (!sale) return res.status(404).json({ message: 'Sale not found' });
+    if (req.user.role === 'customer' && sale.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
 
     res.json(sale);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -239,7 +254,7 @@ router.put('/:id', requireRole('admin', 'pharmacist'), async (req, res) => {
     res.json(updatedSale);
   } catch (error) {
     await transaction.rollback();
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: 'Unable to update sale' });
   }
 });
 
@@ -265,7 +280,7 @@ router.delete('/:id', requireRole('admin', 'pharmacist'), async (req, res) => {
     res.json({ message: 'Sale deleted and stock restored successfully' });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

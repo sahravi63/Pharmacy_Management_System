@@ -5,6 +5,16 @@ const Staff = sequelize.define('Staff', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
+    autoIncrement: true,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    unique: true,
     references: {
       model: 'users',
       key: 'id',

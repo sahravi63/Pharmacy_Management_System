@@ -33,6 +33,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(50),
     unique: true,
     allowNull: true
+  },
+
+  refreshToken: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   timestamps: true

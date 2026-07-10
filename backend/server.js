@@ -44,7 +44,7 @@ app.use(cors({
 }));
 
 app.use(helmet());
-app.use(morgan('dev'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 
 // Routes
@@ -64,6 +64,11 @@ app.use('/api/prescriptions', prescriptionRoutes);
 // Handle 404
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({ message: 'Internal server error' });
 });
 
 // Sync DB

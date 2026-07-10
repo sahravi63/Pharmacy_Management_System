@@ -7,16 +7,24 @@ const requireRole = require('../middleware/requireRole');
 const sequelize = require('../config/db');
 const { createNotification, notifyStockLevel } = require('../services/notificationService');
 const { resolveOrderCustomerName } = require('../utils/orderCustomerName');
+const { getPaginationOptions } = require('../utils/validation');
 
 const VALID_STATUSES = ['Pending', 'Processing', 'Delivered', 'Cancelled'];
 const STOCK_RESERVED_STATUSES = ['Pending', 'Processing', 'Delivered'];
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
+    const { limit, offset } = getPaginationOptions(req.query);
+    const where = req.user.role === 'customer' ? { userId: req.user.id } : undefined;
+    const orders = await Order.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+    });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Unable to fetch orders' });
   }
 });
 
@@ -51,6 +59,23 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Medicine not found' });
     }
 
+    if (medicineRecord.expiryDate && new Date(medicineRecord.expiryDate) < new Date()) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'This medicine is expired and cannot be ordered' });
+    }
+
+    if (medicineRecord.requiresPrescription && req.user?.role === 'customer') {
+      const prescription = await sequelize.models.Prescription.findOne({
+        where: { userId: req.user.id, medicineId: medicineRecord.id, status: 'Filled' },
+        transaction,
+      });
+
+      if (!prescription) {
+        await transaction.rollback();
+        return res.status(403).json({ message: 'A valid prescription is required for this medicine' });
+      }
+    }
+
     if (medicineRecord.stock < parsedQuantity) {
       await transaction.rollback();
       return res.status(400).json({ message: `Only ${medicineRecord.stock} units available` });
@@ -61,6 +86,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const totalPrice = parsedQuantity * Number(medicineRecord.price);
     const newOrder = await Order.create({
+      userId: req.user?.role === 'customer' ? req.user.id : null,
       customerName: resolvedCustomerName,
       medicine: medicineRecord.name,
       medicineId: medicineRecord.id,
@@ -82,7 +108,7 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json(newOrder);
   } catch (err) {
     await transaction.rollback();
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: 'Unable to place order' });
   }
 });
 
@@ -103,6 +129,11 @@ router.patch('/:id', authenticate, requireRole('admin', 'pharmacist'), async (re
     if (!order) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (req.user.role === 'customer') {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     const medicineRecord = await Medicine.findOne({
@@ -147,7 +178,7 @@ router.patch('/:id', authenticate, requireRole('admin', 'pharmacist'), async (re
     res.json(order);
   } catch (err) {
     await transaction.rollback();
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: 'Unable to update order' });
   }
 });
 

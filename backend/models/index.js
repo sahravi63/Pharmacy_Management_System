@@ -17,8 +17,8 @@ Customer.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Pharmacist, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Pharmacist.belongsTo(User, { foreignKey: 'userId' });
 
-User.hasOne(Staff, { foreignKey: 'id', onDelete: 'CASCADE' });
-Staff.belongsTo(User, { foreignKey: 'id' });
+User.hasOne(Staff, { foreignKey: 'userId', onDelete: 'CASCADE' });
+Staff.belongsTo(User, { foreignKey: 'userId' });
 
 Medicine.hasMany(Notification, { foreignKey: 'medicineId', onDelete: 'SET NULL' });
 Notification.belongsTo(Medicine, { foreignKey: 'medicineId' });
